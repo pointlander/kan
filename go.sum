@@ -1,2 +1,4 @@
 github.com/mjibson/go-dsp v0.0.0-20180508042940-11479a337f12 h1:dd7vnTDfjtwCETZDrRe+GPYNLA1jBtbZeyfyE8eZCyk=
 github.com/mjibson/go-dsp v0.0.0-20180508042940-11479a337f12/go.mod h1:i/KKcxEWEO8Yyl11DYafRPKOPVYTrhxiTRigjtEEXZU=
+github.com/pointlander/matrix v0.0.0-20240501200500-3225dbdfbf15 h1:NDSh0bWwxWU1Q4kNhu5PW1K6JPMjbRZyWBp/Abo/mR4=
+github.com/pointlander/matrix v0.0.0-20240501200500-3225dbdfbf15/go.mod h1:uV0Qn/6rCMrIh+TFYFGRpVeesmHB/3GftLPXbJUDdqY=

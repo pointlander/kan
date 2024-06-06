@@ -17,57 +17,45 @@ import (
 	"github.com/mjibson/go-dsp/fft"
 )
 
-func main() {
-	input, err := os.Open("test.jpg")
-	if err != nil {
-		panic(err)
-	}
-	defer input.Close()
-	img, _, err := image.Decode(input)
-	if err != nil {
-		panic(err)
-	}
-	bounds := img.Bounds()
-	gray := image.NewGray(bounds)
+// Useses the fft to resize an image
+func Resize(gray *image.Gray, xscale, yscale int) *image.Gray {
+	bounds := gray.Bounds()
 	dx := bounds.Dx()
 	dy := bounds.Dy()
-	for x := 0; x < dx; x++ {
-		for y := 0; y < dy; y++ {
-			gray.Set(x, y, color.GrayModel.Convert(img.At(x, y)))
-		}
-	}
-	mat := dsputils.MakeMatrix(make([]complex128, 8*8*((dx/8)*(dy/8))), []int{8, 8, dx / 8, dy / 8})
-	for x := 0; x < dx; x += 8 {
+	mat := dsputils.MakeMatrix(make([]complex128, xscale*yscale*((dx/xscale)*(dy/yscale))),
+		[]int{xscale, yscale, dx / xscale, dy / yscale})
+	for x := 0; x < dx; x += xscale {
 		for y := 0; y < dy; y += 8 {
-			for a := 0; a < 8; a++ {
+			for a := 0; a < xscale; a++ {
 				for b := 0; b < 8; b++ {
 					g := float64(gray.GrayAt(x+a, y+b).Y)
-					mat.SetValue(complex(g/255, 0), []int{a, b, x / 8, y / 8})
+					mat.SetValue(complex(g/255, 0), []int{a, b, x / xscale, y / 8})
 				}
 			}
 		}
 	}
 	freq := fft.FFTN(mat)
-	mat2 := dsputils.MakeMatrix(make([]complex128, 8*8*((dx/8)*(dy/8))), []int{8, 8, dx / 8, dy / 8})
-	for x := 0; x < dx/8; x++ {
-		for y := 0; y < dy/8; y++ {
+	mat2 := dsputils.MakeMatrix(make([]complex128, xscale*yscale*((dx/xscale)*(dy/yscale))),
+		[]int{xscale, yscale, dx / xscale, dy / yscale})
+	for x := 0; x < dx/xscale; x++ {
+		for y := 0; y < dy/yscale; y++ {
 			value := freq.Value([]int{0, 0, x, y})
 			mat2.SetValue(value, []int{0, 0, x, y})
 		}
 	}
 	inverse := fft.IFFTN(mat2)
-	out := image.NewGray(image.Rect(0, 0, dx/8, dy/8))
-	min, max := make([]float64, 64), make([]float64, 64)
+	out := image.NewGray(image.Rect(0, 0, dx/xscale, dy/yscale))
+	min, max := make([]float64, xscale*yscale), make([]float64, xscale*yscale)
 	for i := range min {
 		min[i] = 255
 	}
-	for x := 0; x < dx/8; x++ {
-		for y := 0; y < dy/8; y++ {
+	for x := 0; x < dx/xscale; x++ {
+		for y := 0; y < dy/yscale; y++ {
 			v := inverse.Value([]int{0, 0, x, y})
 			value := 255 * cmplx.Abs(v)
 			index := 0
-			for a := 0; a < 8; a++ {
-				for b := 0; b < 8; b++ {
+			for a := 0; a < xscale; a++ {
+				for b := 0; b < yscale; b++ {
 					vv := inverse.Value([]int{a, b, x, y})
 					vvalue := 255 * cmplx.Abs(vv)
 					if value != vvalue {
@@ -87,6 +75,29 @@ func main() {
 	}
 	fmt.Println(min)
 	fmt.Println(max)
+	return out
+}
+
+func main() {
+	input, err := os.Open("test.jpg")
+	if err != nil {
+		panic(err)
+	}
+	defer input.Close()
+	img, _, err := image.Decode(input)
+	if err != nil {
+		panic(err)
+	}
+	bounds := img.Bounds()
+	gray := image.NewGray(bounds)
+	dx := bounds.Dx()
+	dy := bounds.Dy()
+	for x := 0; x < dx; x++ {
+		for y := 0; y < dy; y++ {
+			gray.Set(x, y, color.GrayModel.Convert(img.At(x, y)))
+		}
+	}
+	out := Resize(gray, 8, 8)
 	output, err := os.Create("gray.jpg")
 	if err != nil {
 		panic(err)

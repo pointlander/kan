@@ -18,10 +18,11 @@ import (
 )
 
 // Useses the fft to resize an image
-func Resize(gray *image.Gray, xscale, yscale int) *image.Gray {
+func Resize(gray *image.Gray, xscale, yscale, padx, pady int) *image.Gray {
 	bounds := gray.Bounds()
 	dx := bounds.Dx()
 	dy := bounds.Dy()
+	fmt.Println(dx/xscale, dy/yscale)
 	mat := dsputils.MakeMatrix(make([]complex128, xscale*yscale*((dx/xscale)*(dy/yscale))),
 		[]int{xscale, yscale, dx / xscale, dy / yscale})
 	for x := 0; x < dx; x += xscale {
@@ -44,7 +45,7 @@ func Resize(gray *image.Gray, xscale, yscale int) *image.Gray {
 		}
 	}
 	inverse := fft.IFFTN(mat2)
-	out := image.NewGray(image.Rect(0, 0, dx/xscale, dy/yscale))
+	out := image.NewGray(image.Rect(0, 0, dx/xscale+padx, dy/yscale+pady))
 	min, max := make([]float64, xscale*yscale), make([]float64, xscale*yscale)
 	for i := range min {
 		min[i] = 255
@@ -97,7 +98,7 @@ func main() {
 			gray.Set(x, y, color.GrayModel.Convert(img.At(x, y)))
 		}
 	}
-	out := Resize(gray, 8, 8)
+	out := Resize(gray, 8, 8, 2, 0)
 	output, err := os.Create("gray.jpg")
 	if err != nil {
 		panic(err)

@@ -36,23 +36,23 @@ func main() {
 			gray.Set(x, y, color.GrayModel.Convert(img.At(x, y)))
 		}
 	}
-	mat := dsputils.MakeMatrix(make([]complex128, 64*((dx/8)*(dy/8))), []int{64, dx / 8, dy / 8})
+	mat := dsputils.MakeMatrix(make([]complex128, 8*8*((dx/8)*(dy/8))), []int{8, 8, dx / 8, dy / 8})
 	for x := 0; x < dx; x += 8 {
 		for y := 0; y < dy; y += 8 {
 			for a := 0; a < 8; a++ {
 				for b := 0; b < 8; b++ {
 					g := float64(gray.GrayAt(x+a, y+b).Y)
-					mat.SetValue(complex(g/255, 0), []int{a + 8*b, x / 8, y / 8})
+					mat.SetValue(complex(g/255, 0), []int{a, b, x / 8, y / 8})
 				}
 			}
 		}
 	}
 	freq := fft.FFTN(mat)
-	mat2 := dsputils.MakeMatrix(make([]complex128, 64*((dx/8)*(dy/8))), []int{64, dx / 8, dy / 8})
+	mat2 := dsputils.MakeMatrix(make([]complex128, 8*8*((dx/8)*(dy/8))), []int{8, 8, dx / 8, dy / 8})
 	for x := 0; x < dx/8; x++ {
 		for y := 0; y < dy/8; y++ {
-			value := freq.Value([]int{0, x, y})
-			mat2.SetValue(value, []int{0, x, y})
+			value := freq.Value([]int{0, 0, x, y})
+			mat2.SetValue(value, []int{0, 0, x, y})
 		}
 	}
 	inverse := fft.IFFTN(mat2)
@@ -63,19 +63,23 @@ func main() {
 	}
 	for x := 0; x < dx/8; x++ {
 		for y := 0; y < dy/8; y++ {
-			v := inverse.Value([]int{0, x, y})
+			v := inverse.Value([]int{0, 0, x, y})
 			value := 255 * cmplx.Abs(v)
-			for i := 0; i < 64; i++ {
-				vv := inverse.Value([]int{i, x, y})
-				vvalue := 255 * cmplx.Abs(vv)
-				if value != vvalue {
-					fmt.Println("not the same")
-				}
-				if vvalue < min[i] {
-					min[i] = vvalue
-				}
-				if vvalue > max[i] {
-					max[i] = vvalue
+			index := 0
+			for a := 0; a < 8; a++ {
+				for b := 0; b < 8; b++ {
+					vv := inverse.Value([]int{a, b, x, y})
+					vvalue := 255 * cmplx.Abs(vv)
+					if value != vvalue {
+						fmt.Println("not the same")
+					}
+					if vvalue < min[index] {
+						min[index] = vvalue
+					}
+					if vvalue > max[index] {
+						max[index] = vvalue
+					}
+					index++
 				}
 			}
 			out.SetGray(x, y, color.Gray{Y: byte(value)})

@@ -12,10 +12,12 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"math/cmplx"
+	"math/rand"
 	"os"
 
 	"github.com/mjibson/go-dsp/dsputils"
 	"github.com/mjibson/go-dsp/fft"
+	"github.com/pointlander/gradient/sc128"
 	"github.com/pointlander/matrix"
 )
 
@@ -220,5 +222,75 @@ func main() {
 	if *FlagFFTSA {
 		FFTSA()
 		return
+	}
+
+	xor := [][]bool{
+		{false, false, false},
+		{true, false, true},
+		{false, true, true},
+		{true, true, false},
+	}
+
+	rng := rand.New(rand.NewSource(1))
+	input := make([]sc128.V, 2)
+	layer1 := make([]sc128.V, 8)
+	for i := range layer1 {
+		layer1[i].X = complex(rng.Float64()*2-1, rng.Float64()*2-1)
+	}
+	layer2 := make([]sc128.V, 4)
+	for i := range layer2 {
+		layer2[i].X = complex(rng.Float64()*2-1, rng.Float64()*2-1)
+	}
+	output := sc128.V{}
+	x0 := sc128.Mul(input[0].Meta(), layer1[0].Meta())
+	x1 := sc128.Mul(input[0].Meta(), layer1[1].Meta())
+	x2 := sc128.Mul(input[0].Meta(), layer1[2].Meta())
+	x3 := sc128.Mul(input[0].Meta(), layer1[3].Meta())
+	x4 := sc128.Mul(input[1].Meta(), layer1[4].Meta())
+	x5 := sc128.Mul(input[1].Meta(), layer1[5].Meta())
+	x6 := sc128.Mul(input[1].Meta(), layer1[6].Meta())
+	x7 := sc128.Mul(input[1].Meta(), layer1[7].Meta())
+	y0 := sc128.Add(x0, x4)
+	y1 := sc128.Add(x1, x5)
+	y2 := sc128.Add(x2, x6)
+	y3 := sc128.Add(x3, x7)
+	z0 := sc128.Mul(y0, layer2[0].Meta())
+	z1 := sc128.Mul(y1, layer2[1].Meta())
+	z2 := sc128.Mul(y2, layer2[2].Meta())
+	z3 := sc128.Mul(y3, layer2[3].Meta())
+	grand := sc128.Add(sc128.Add(z0, z1), sc128.Add(z2, z3))
+	loss := sc128.Sub(output.Meta(), grand)
+	loss = sc128.Mul(loss, loss)
+	for i := 0; i < 1024; i++ {
+		for i := range layer1 {
+			layer1[i].D = 0
+		}
+		for i := range layer2 {
+			layer2[i].D = 0
+		}
+		t := xor[rand.Intn(len(xor))]
+		if t[0] {
+			input[0].X = 1 + 1i
+		} else {
+			input[0].X = -1 - 1i
+		}
+		if t[1] {
+			input[1].X = 1 + 1i
+		} else {
+			input[1].X = -1 - 1i
+		}
+		if t[2] {
+			output.X = 1 + 1i
+		} else {
+			output.X = -1 - 1i
+		}
+		cost := sc128.Gradient(loss)
+		for i := range layer1 {
+			layer1[i].X -= (.001 + .001i) * layer1[i].D
+		}
+		for i := range layer2 {
+			layer2[i].X -= (.001 + .001i) * layer2[i].D
+		}
+		fmt.Println(cmplx.Abs(cost.X))
 	}
 }

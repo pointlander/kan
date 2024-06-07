@@ -124,7 +124,7 @@ func Transform(gray *image.Gray, xscale, yscale, padx, pady int) *image.Gray {
 		}
 	}
 	inverse := fft.IFFTN(mat2)
-	out := image.NewGray(image.Rect(0, 0, dx/xscale+padx, dy/yscale+pady))
+	out := image.NewGray(image.Rect(0, 0, dx+padx, dy+pady))
 	min, max := make([]float64, xscale*yscale), make([]float64, xscale*yscale)
 	for i := range min {
 		min[i] = 255
@@ -136,9 +136,6 @@ func Transform(gray *image.Gray, xscale, yscale, padx, pady int) *image.Gray {
 				for b := 0; b < yscale; b++ {
 					vv := inverse.Value([]int{a, b, x, y})
 					vvalue := 255 * cmplx.Abs(vv)
-					/*if value != vvalue {
-						fmt.Println("not the same")
-					}*/
 					if vvalue < min[index] {
 						min[index] = vvalue
 					}
@@ -153,28 +150,17 @@ func Transform(gray *image.Gray, xscale, yscale, padx, pady int) *image.Gray {
 	fmt.Println(min)
 	fmt.Println(max)
 
-	for x := 0; x < dx/xscale; x++ {
-		for y := 0; y < dy/yscale; y++ {
-			v := inverse.Value([]int{0, 0, x, y})
-			value := 255 * cmplx.Abs(v)
+	for x := 0; x < dx; x += xscale {
+		for y := 0; y < dy; y += yscale {
 			index := 0
 			for a := 0; a < xscale; a++ {
 				for b := 0; b < yscale; b++ {
-					vv := inverse.Value([]int{a, b, x, y})
-					vvalue := 255 * cmplx.Abs(vv)
-					/*if value != vvalue {
-						fmt.Println("not the same")
-					}*/
-					if vvalue < min[index] {
-						min[index] = vvalue
-					}
-					if vvalue > max[index] {
-						max[index] = vvalue
-					}
+					v := inverse.Value([]int{a, b, x / xscale, y / yscale})
+					value := 255 * cmplx.Abs(v)
+					out.SetGray(x+a, y+b, color.Gray{Y: byte(255 * value / max[index])})
 					index++
 				}
 			}
-			out.SetGray(x, y, color.Gray{Y: byte(255 * value / max[0])})
 		}
 	}
 	return out

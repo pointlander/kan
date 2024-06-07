@@ -5,6 +5,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	"image/color"
@@ -166,7 +167,8 @@ func Transform(gray *image.Gray, xscale, yscale, padx, pady int) *image.Gray {
 	return out
 }
 
-func main() {
+// FFTSA is fft with self attention
+func FFTSA() {
 	input, err := os.Open("test.jpg")
 	if err != nil {
 		panic(err)
@@ -204,5 +206,19 @@ func main() {
 	err = png.Encode(output2, out2)
 	if err != nil {
 		panic(err)
+	}
+}
+
+var (
+	// FlatFFTSA is fft with self attention mode
+	FlagFFTSA = flag.Bool("fftsa", false, "fftsa mode")
+)
+
+func main() {
+	flag.Parse()
+
+	if *FlagFFTSA {
+		FFTSA()
+		return
 	}
 }

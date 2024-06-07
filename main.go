@@ -99,28 +99,28 @@ func Transform(gray *image.Gray, xscale, yscale, padx, pady int) *image.Gray {
 		}
 	}
 	freq := fft.FFTN(mat)
-	mat3real := matrix.NewMatrix(xscale*yscale, ((dx / xscale) * (dy / yscale)))
-	mat3imag := matrix.NewMatrix(xscale*yscale, ((dx / xscale) * (dy / yscale)))
+	mat3 := matrix.NewComplexMatrix(xscale*yscale, ((dx / xscale) * (dy / yscale)))
 	for x := 0; x < dx/xscale; x++ {
 		for y := 0; y < dy/yscale; y++ {
 			for a := 0; a < xscale; a++ {
 				for b := 0; b < yscale; b++ {
 					value := freq.Value([]int{a, b, x, y})
-					mat3real.Data = append(mat3real.Data, float32(real(value)))
-					mat3imag.Data = append(mat3imag.Data, float32(imag(value)))
+					mat3.Data = append(mat3.Data, value)
 				}
 			}
 		}
 	}
-	mat4real := matrix.SelfAttention(mat3real, mat3real, mat3real)
-	mat4imag := matrix.SelfAttention(mat3imag, mat3imag, mat3imag)
+	mat4 := matrix.ComplexSelfAttention(mat3, mat3, mat3)
 	mat2 := dsputils.MakeMatrix(make([]complex128, xscale*yscale*((dx/xscale)*(dy/yscale))),
 		[]int{xscale, yscale, dx / xscale, dy / yscale})
 	for x := 0; x < dx/xscale; x++ {
 		for y := 0; y < dy/yscale; y++ {
-			value := complex(float64(mat4real.Data[(y*(dy/yscale)+x)*yscale*xscale]),
-				float64(mat4imag.Data[(y*(dy/yscale)+x)*yscale*xscale]))
-			mat2.SetValue(value, []int{0, 0, x, y})
+			for a := 0; a < xscale; a++ {
+				for b := 0; b < yscale; b++ {
+					value := mat4.Data[(y*(dy/yscale)+x)*yscale*xscale+b*xscale+a]
+					mat2.SetValue(value, []int{a, b, x, y})
+				}
+			}
 		}
 	}
 	inverse := fft.IFFTN(mat2)

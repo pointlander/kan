@@ -235,11 +235,11 @@ func main() {
 	input := make([]sc128.V, 2)
 	layer1 := make([]sc128.V, 10)
 	for i := range layer1 {
-		layer1[i].X = complex(rng.Float64()*2-1, rng.Float64()*2-1)
+		layer1[i].X = complex(rng.Float64()-.5, rng.Float64()-.5)
 	}
 	layer2 := make([]sc128.V, 5)
 	for i := range layer2 {
-		layer2[i].X = complex(rng.Float64()*2-1, rng.Float64()*2-1)
+		layer2[i].X = complex(rng.Float64()-.5, rng.Float64()-.5)
 	}
 	output := sc128.V{}
 	x0 := sc128.Mul(input[0].Meta(), layer1[0].Meta())
@@ -257,11 +257,11 @@ func main() {
 	y2 := sc128.Add(x2, x7)
 	y3 := sc128.Add(x3, x8)
 	y4 := sc128.Add(x4, x9)
-	z0 := sc128.Mul(y0, layer2[0].Meta())
-	z1 := sc128.Mul(y1, layer2[1].Meta())
-	z2 := sc128.Mul(y2, layer2[2].Meta())
-	z3 := sc128.Mul(y3, layer2[3].Meta())
-	z4 := sc128.Mul(y4, layer2[4].Meta())
+	z0 := sc128.Mul(sc128.Exp(y0), layer2[0].Meta())
+	z1 := sc128.Mul(sc128.Exp(y1), layer2[1].Meta())
+	z2 := sc128.Mul(sc128.Exp(y2), layer2[2].Meta())
+	z3 := sc128.Mul(sc128.Exp(y3), layer2[3].Meta())
+	z4 := sc128.Mul(sc128.Exp(y4), layer2[4].Meta())
 	grand := sc128.Add(sc128.Add(sc128.Add(z0, z1), sc128.Add(z2, z3)), z4)
 	loss := sc128.Sub(output.Meta(), grand)
 	loss = sc128.Mul(loss, loss)

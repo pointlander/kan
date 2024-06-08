@@ -211,19 +211,8 @@ func FFTSA() {
 	}
 }
 
-var (
-	// FlatFFTSA is fft with self attention mode
-	FlagFFTSA = flag.Bool("fftsa", false, "fftsa mode")
-)
-
-func main() {
-	flag.Parse()
-
-	if *FlagFFTSA {
-		FFTSA()
-		return
-	}
-
+// XOR is xor mode
+func XOR() {
 	xor := [][]bool{
 		{false, false, false},
 		{true, false, true},
@@ -242,27 +231,27 @@ func main() {
 		layer2[i].X = complex(rng.Float64()-.5, rng.Float64()-.5)
 	}
 	output := sc128.V{}
-	x0 := sc128.Mul(input[0].Meta(), layer1[0].Meta())
-	x1 := sc128.Mul(input[0].Meta(), layer1[1].Meta())
-	x2 := sc128.Mul(input[0].Meta(), layer1[2].Meta())
-	x3 := sc128.Mul(input[0].Meta(), layer1[3].Meta())
-	x4 := sc128.Mul(input[0].Meta(), layer1[4].Meta())
-	x5 := sc128.Mul(input[1].Meta(), layer1[5].Meta())
-	x6 := sc128.Mul(input[1].Meta(), layer1[6].Meta())
-	x7 := sc128.Mul(input[1].Meta(), layer1[7].Meta())
-	x8 := sc128.Mul(input[1].Meta(), layer1[8].Meta())
-	x9 := sc128.Mul(input[1].Meta(), layer1[9].Meta())
-	y0 := sc128.Add(x0, x5)
-	y1 := sc128.Add(x1, x6)
-	y2 := sc128.Add(x2, x7)
-	y3 := sc128.Add(x3, x8)
-	y4 := sc128.Add(x4, x9)
-	z0 := sc128.Mul(sc128.Exp(y0), layer2[0].Meta())
-	z1 := sc128.Mul(sc128.Exp(y1), layer2[1].Meta())
-	z2 := sc128.Mul(sc128.Exp(y2), layer2[2].Meta())
-	z3 := sc128.Mul(sc128.Exp(y3), layer2[3].Meta())
-	z4 := sc128.Mul(sc128.Exp(y4), layer2[4].Meta())
-	grand := sc128.Add(sc128.Add(sc128.Add(z0, z1), sc128.Add(z2, z3)), z4)
+	x := make([]sc128.Meta, 10)
+	y := make([]sc128.Meta, len(x)/2)
+	z := make([]sc128.Meta, len(y))
+	for i := range layer1 {
+		if i < 5 {
+			x[i] = sc128.Mul(input[0].Meta(), layer1[i].Meta())
+		} else {
+			x[i] = sc128.Mul(input[1].Meta(), layer1[i].Meta())
+		}
+	}
+	for i := range y {
+		y[i] = sc128.Add(x[i], x[i+5])
+	}
+	for i := range z {
+		z[i] = sc128.Mul(sc128.Exp(y[i]), layer2[i].Meta())
+	}
+	grand := sc128.Add(z[0], z[1])
+	zz := z[2:]
+	for i := range zz {
+		grand = sc128.Add(grand, zz[i])
+	}
 	loss := sc128.Sub(output.Meta(), grand)
 	loss = sc128.Mul(loss, loss)
 	for i := 0; i < 1024; i++ {
@@ -317,5 +306,24 @@ func main() {
 			fmt.Println(output.X, a.X)
 			return true
 		})
+	}
+}
+
+var (
+	// FlatFFTSA is fft with self attention mode
+	FlagFFTSA = flag.Bool("fftsa", false, "fftsa mode")
+	// FlagXOR is xor mode
+	FlagXOR = flag.Bool("xor", false, "xor mode")
+)
+
+func main() {
+	flag.Parse()
+
+	if *FlagFFTSA {
+		FFTSA()
+		return
+	} else if *FlagXOR {
+		XOR()
+		return
 	}
 }

@@ -322,11 +322,11 @@ func XOR1() {
 	input := make([]sc128.V, 1)
 	layer1 := make([]sc128.V, 10)
 	for i := range layer1 {
-		layer1[i].X = complex(rng.NormFloat64()*.25, rng.NormFloat64()*.25)
+		layer1[i].X = complex(rng.NormFloat64()/4, rng.NormFloat64()/4)
 	}
 	layer2 := make([]sc128.V, 5)
 	for i := range layer2 {
-		layer2[i].X = complex(rng.NormFloat64()*.25, rng.NormFloat64()*.25)
+		layer2[i].X = complex(rng.NormFloat64()/4, rng.NormFloat64()/4)
 	}
 	output := sc128.V{}
 	x := make([]sc128.Meta, 10)
@@ -339,7 +339,7 @@ func XOR1() {
 		y[i] = sc128.Add(x[i], x[i+5])
 	}
 	for i := range z {
-		z[i] = sc128.Mul(sc128.Exp(y[i]), layer2[i].Meta())
+		z[i] = sc128.Mul(sc128.Exp(sc128.Mul(y[i], y[i])), layer2[i].Meta())
 	}
 	grand := sc128.Add(z[0], z[1])
 	zz := z[2:]

@@ -320,23 +320,23 @@ func XOR1() {
 
 	rng := rand.New(rand.NewSource(1))
 	input := make([]sc128.V, 1)
-	layer1 := make([]sc128.V, 20)
+	layer1 := make([]sc128.V, 10)
 	for i := range layer1 {
-		layer1[i].X = complex(rng.Float64()*.5-.25, rng.Float64()*.5-.25)
+		layer1[i].X = complex(rng.NormFloat64()*.25, rng.NormFloat64()*.25)
 	}
-	layer2 := make([]sc128.V, 10)
+	layer2 := make([]sc128.V, 5)
 	for i := range layer2 {
-		layer2[i].X = complex(rng.Float64()*.5-.25, rng.Float64()*.5-.25)
+		layer2[i].X = complex(rng.NormFloat64()*.25, rng.NormFloat64()*.25)
 	}
 	output := sc128.V{}
-	x := make([]sc128.Meta, 20)
+	x := make([]sc128.Meta, 10)
 	y := make([]sc128.Meta, len(x)/2)
 	z := make([]sc128.Meta, len(y))
 	for i := range layer1 {
 		x[i] = sc128.Mul(input[0].Meta(), layer1[i].Meta())
 	}
 	for i := range y {
-		y[i] = sc128.Add(x[i], x[i+10])
+		y[i] = sc128.Add(x[i], x[i+5])
 	}
 	for i := range z {
 		z[i] = sc128.Mul(sc128.Exp(y[i]), layer2[i].Meta())
@@ -366,9 +366,9 @@ func XOR1() {
 			input[0].X = -1 + -1i
 		}
 		if t[2] {
-			output.X = 1 + 1i
+			output.X = 1
 		} else {
-			output.X = -1 - 1i
+			output.X = -1
 		}
 		cost := sc128.Gradient(loss)
 		for i := range layer1 {
@@ -390,12 +390,12 @@ func XOR1() {
 			input[0].X = -1 + -1i
 		}
 		if t[2] {
-			output.X = 1 + 1i
+			output.X = 1
 		} else {
-			output.X = -1 - 1i
+			output.X = -1
 		}
 		grand(func(a *sc128.V) bool {
-			fmt.Println(output.X, a.X)
+			fmt.Println(output.X, real(a.X))
 			return true
 		})
 	}

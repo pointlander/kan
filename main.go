@@ -339,7 +339,7 @@ func XOR1() {
 		y[i] = sc128.Add(x[i], x[i+5])
 	}
 	for i := range z {
-		z[i] = sc128.Mul(sc128.Exp(sc128.Mul(y[i], y[i])), layer2[i].Meta())
+		z[i] = sc128.Mul(sc128.Mul(y[i], y[i]), layer2[i].Meta())
 	}
 	grand := sc128.Add(z[0], z[1])
 	zz := z[2:]
@@ -348,7 +348,7 @@ func XOR1() {
 	}
 	loss := sc128.Sub(output.Meta(), grand)
 	loss = sc128.Mul(loss, loss)
-	for i := 0; i < 1024; i++ {
+	for i := 0; i < 32; i++ {
 		for i := range layer1 {
 			layer1[i].D = 0
 		}
@@ -372,10 +372,10 @@ func XOR1() {
 		}
 		cost := sc128.Gradient(loss)
 		for i := range layer1 {
-			layer1[i].X -= (.001 + .001i) * layer1[i].D
+			layer1[i].X -= (.01 + .01i) * layer1[i].D
 		}
 		for i := range layer2 {
-			layer2[i].X -= (.001 + .001i) * layer2[i].D
+			layer2[i].X -= (.01 + .01i) * layer2[i].D
 		}
 		fmt.Println(cmplx.Abs(cost.X))
 	}

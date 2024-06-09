@@ -309,11 +309,105 @@ func XOR() {
 	}
 }
 
+// XOR1 is the 1 input xor mode
+func XOR1() {
+	xor := [][]bool{
+		{false, false, false},
+		{true, false, true},
+		{false, true, true},
+		{true, true, false},
+	}
+
+	rng := rand.New(rand.NewSource(1))
+	input := make([]sc128.V, 1)
+	layer1 := make([]sc128.V, 20)
+	for i := range layer1 {
+		layer1[i].X = complex(rng.Float64()*.5-.25, rng.Float64()*.5-.25)
+	}
+	layer2 := make([]sc128.V, 10)
+	for i := range layer2 {
+		layer2[i].X = complex(rng.Float64()*.5-.25, rng.Float64()*.5-.25)
+	}
+	output := sc128.V{}
+	x := make([]sc128.Meta, 20)
+	y := make([]sc128.Meta, len(x)/2)
+	z := make([]sc128.Meta, len(y))
+	for i := range layer1 {
+		x[i] = sc128.Mul(input[0].Meta(), layer1[i].Meta())
+	}
+	for i := range y {
+		y[i] = sc128.Add(x[i], x[i+10])
+	}
+	for i := range z {
+		z[i] = sc128.Mul(sc128.Exp(y[i]), layer2[i].Meta())
+	}
+	grand := sc128.Add(z[0], z[1])
+	zz := z[2:]
+	for i := range zz {
+		grand = sc128.Add(grand, zz[i])
+	}
+	loss := sc128.Sub(output.Meta(), grand)
+	loss = sc128.Mul(loss, loss)
+	for i := 0; i < 1024; i++ {
+		for i := range layer1 {
+			layer1[i].D = 0
+		}
+		for i := range layer2 {
+			layer2[i].D = 0
+		}
+		t := xor[rand.Intn(len(xor))]
+		if t[0] && t[1] {
+			input[0].X = 1 + 1i
+		} else if t[0] && !t[1] {
+			input[0].X = 1 - 1i
+		} else if !t[0] && t[1] {
+			input[0].X = -1 + 1i
+		} else if !t[0] && !t[1] {
+			input[0].X = -1 + -1i
+		}
+		if t[2] {
+			output.X = 1 + 1i
+		} else {
+			output.X = -1 - 1i
+		}
+		cost := sc128.Gradient(loss)
+		for i := range layer1 {
+			layer1[i].X -= (.001 + .001i) * layer1[i].D
+		}
+		for i := range layer2 {
+			layer2[i].X -= (.001 + .001i) * layer2[i].D
+		}
+		fmt.Println(cmplx.Abs(cost.X))
+	}
+	for _, t := range xor {
+		if t[0] && t[1] {
+			input[0].X = 1 + 1i
+		} else if t[0] && !t[1] {
+			input[0].X = 1 - 1i
+		} else if !t[0] && t[1] {
+			input[0].X = -1 + 1i
+		} else if !t[0] && !t[1] {
+			input[0].X = -1 + -1i
+		}
+		if t[2] {
+			output.X = 1 + 1i
+		} else {
+			output.X = -1 - 1i
+		}
+		grand(func(a *sc128.V) bool {
+			fmt.Println(output.X, a.X)
+			return true
+		})
+	}
+}
+
 var (
 	// FlatFFTSA is fft with self attention mode
 	FlagFFTSA = flag.Bool("fftsa", false, "fftsa mode")
 	// FlagXOR is xor mode
 	FlagXOR = flag.Bool("xor", false, "xor mode")
+	// FlagXOR1 is the single input xor mode
+	FlagXOR1 = flag.Bool("xor1", false, "single input xor mode")
 )
 
 func main() {
@@ -324,6 +418,9 @@ func main() {
 		return
 	} else if *FlagXOR {
 		XOR()
+		return
+	} else if *FlagXOR1 {
+		XOR1()
 		return
 	}
 }

@@ -401,6 +401,28 @@ func XOR1() {
 	}
 }
 
+// Image is the image learning mode
+func Image() {
+	rng := rand.New(rand.NewSource(1))
+	input, err := os.Open("gray.jpg")
+	if err != nil {
+		panic(err)
+	}
+	defer input.Close()
+	img, _, err := image.Decode(input)
+	if err != nil {
+		panic(err)
+	}
+	gray := img.(*image.Gray)
+	bounds := gray.Bounds()
+	dx := bounds.Dx()
+	dy := bounds.Dy()
+	for i := 0; i < 1024*1024; i++ {
+		g := gray.GrayAt(rng.Intn(dx), rng.Intn(dy))
+		_ = g
+	}
+}
+
 var (
 	// FlatFFTSA is fft with self attention mode
 	FlagFFTSA = flag.Bool("fftsa", false, "fftsa mode")
@@ -408,6 +430,8 @@ var (
 	FlagXOR = flag.Bool("xor", false, "xor mode")
 	// FlagXOR1 is the single input xor mode
 	FlagXOR1 = flag.Bool("xor1", false, "single input xor mode")
+	// FlagImage is the image learning mode
+	FlagImage = flag.Bool("image", false, "the image leraning mode")
 )
 
 func main() {
@@ -421,6 +445,9 @@ func main() {
 		return
 	} else if *FlagXOR1 {
 		XOR1()
+		return
+	} else if *FlagImage {
+		Image()
 		return
 	}
 }

@@ -446,7 +446,7 @@ func Image() {
 		z[i] = sc128.Mul(y[i], layer2[i].Meta())
 	}
 	for i := range z1 {
-		z1[i] = sc128.Add(z[i], x[i+5])
+		z1[i] = sc128.Add(z[i], z[i+5])
 	}
 	for i := range z1 {
 		z2[i] = sc128.Mul(sc128.Mul(z1[i], z1[i]), layer3[i].Meta())

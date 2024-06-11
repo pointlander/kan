@@ -420,16 +420,22 @@ func Image() {
 	input := make([]sc128.V, 1)
 	layer1 := make([]sc128.V, 20)
 	for i := range layer1 {
-		layer1[i].X = complex(rng.NormFloat64()/4, rng.NormFloat64()/4)
+		layer1[i].X = complex(rng.NormFloat64()/4.0, rng.NormFloat64()/4.0)
 	}
 	layer2 := make([]sc128.V, 10)
 	for i := range layer2 {
-		layer2[i].X = complex(rng.NormFloat64()/4, rng.NormFloat64()/4)
+		layer2[i].X = complex(rng.NormFloat64()/4.0, rng.NormFloat64()/4.0)
+	}
+	layer3 := make([]sc128.V, 5)
+	for i := range layer3 {
+		layer3[i].X = complex(rng.NormFloat64()/4.0, rng.NormFloat64()/4.0)
 	}
 	output := sc128.V{}
 	x := make([]sc128.Meta, 20)
 	y := make([]sc128.Meta, len(x)/2)
 	z := make([]sc128.Meta, len(y))
+	z1 := make([]sc128.Meta, len(y)/2)
+	z2 := make([]sc128.Meta, len(z1))
 	for i := range layer1 {
 		x[i] = sc128.Mul(input[0].Meta(), layer1[i].Meta())
 	}
@@ -437,16 +443,22 @@ func Image() {
 		y[i] = sc128.Add(x[i], x[i+10])
 	}
 	for i := range z {
-		z[i] = sc128.Mul(sc128.Mul(y[i], y[i]), layer2[i].Meta())
+		z[i] = sc128.Mul(y[i], layer2[i].Meta())
 	}
-	grand := sc128.Add(z[0], z[1])
-	zz := z[2:]
+	for i := range z1 {
+		z1[i] = sc128.Add(z[i], x[i+5])
+	}
+	for i := range z1 {
+		z2[i] = sc128.Mul(sc128.Mul(z1[i], z1[i]), layer3[i].Meta())
+	}
+	grand := sc128.Add(z2[0], z2[1])
+	zz := z2[2:]
 	for i := range zz {
 		grand = sc128.Add(grand, zz[i])
 	}
 	loss := sc128.Sub(output.Meta(), grand)
 	loss = sc128.Mul(loss, loss)
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		total := 0.0
 		for y := 0; y < dy; y++ {
 			for x := 0; x < dx; x++ {
@@ -456,15 +468,29 @@ func Image() {
 				for i := range layer2 {
 					layer2[i].D = 0
 				}
+				for i := range layer3 {
+					layer3[i].D = 0
+				}
 				g := gray.GrayAt(x, y)
-				input[0].X = complex(float64(x)/float64(dx), float64(y)/float64(dy))
+				signX := 1.0
+				signY := 1.0
+				if x&1 == 1 {
+					signX = -1
+				}
+				if y&1 == 1 {
+					signY = -1
+				}
+				input[0].X = complex(signX*float64(x)/float64(dx), signY*float64(y)/float64(dy))
 				output.X = complex(float64(g.Y)/255, 0)
 				cost := sc128.Gradient(loss)
 				for i := range layer1 {
-					layer1[i].X -= (.0001 + .0001i) * layer1[i].D
+					layer1[i].X -= (.00001 + .00001i) * layer1[i].D
 				}
 				for i := range layer2 {
-					layer2[i].X -= (.0001 + .0001i) * layer2[i].D
+					layer2[i].X -= (.00001 + .00001i) * layer2[i].D
+				}
+				for i := range layer3 {
+					layer3[i].X -= (.00001 + .00001i) * layer3[i].D
 				}
 				total += cmplx.Abs(cost.X)
 			}
@@ -475,9 +501,17 @@ func Image() {
 	infer := image.NewGray(bounds)
 	for y := 0; y < dy; y++ {
 		for x := 0; x < dx; x++ {
-			input[0].X = complex(float64(x)/float64(dx), float64(y)/float64(dy))
+			signX := 1.0
+			signY := 1.0
+			if x&1 == 1 {
+				signX = -1
+			}
+			if y&1 == 1 {
+				signY = -1
+			}
+			input[0].X = complex(signX*float64(x)/float64(dx), signY*float64(y)/float64(dy))
 			grand(func(a *sc128.V) bool {
-				infer.Set(x, y, color.Gray{Y: byte(255 * real(a.X))})
+				infer.Set(x, y, color.Gray{Y: byte(255.0 * real(a.X))})
 				return true
 			})
 		}

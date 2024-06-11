@@ -11,7 +11,6 @@ import (
 	"image/color"
 	_ "image/jpeg"
 	"image/png"
-	"math"
 	"math/cmplx"
 	"math/rand"
 	"os"
@@ -419,23 +418,23 @@ func Image() {
 	dx := bounds.Dx()
 	dy := bounds.Dy()
 	input := make([]sc128.V, 1)
-	layer1 := make([]sc128.V, 10)
+	layer1 := make([]sc128.V, 20)
 	for i := range layer1 {
 		layer1[i].X = complex(rng.NormFloat64()/4, rng.NormFloat64()/4)
 	}
-	layer2 := make([]sc128.V, 5)
+	layer2 := make([]sc128.V, 10)
 	for i := range layer2 {
 		layer2[i].X = complex(rng.NormFloat64()/4, rng.NormFloat64()/4)
 	}
 	output := sc128.V{}
-	x := make([]sc128.Meta, 10)
+	x := make([]sc128.Meta, 20)
 	y := make([]sc128.Meta, len(x)/2)
 	z := make([]sc128.Meta, len(y))
 	for i := range layer1 {
 		x[i] = sc128.Mul(input[0].Meta(), layer1[i].Meta())
 	}
 	for i := range y {
-		y[i] = sc128.Add(x[i], x[i+5])
+		y[i] = sc128.Add(x[i], x[i+10])
 	}
 	for i := range z {
 		z[i] = sc128.Mul(sc128.Mul(y[i], y[i]), layer2[i].Meta())
@@ -447,10 +446,10 @@ func Image() {
 	}
 	loss := sc128.Sub(output.Meta(), grand)
 	loss = sc128.Mul(loss, loss)
-	for i := 0; i < 128; i++ {
+	for i := 0; i < 2; i++ {
 		total := 0.0
 		for y := 0; y < dy; y++ {
-			for x := 0; x < dx-1; x++ {
+			for x := 0; x < dx; x++ {
 				for i := range layer1 {
 					layer1[i].D = 0
 				}
@@ -458,20 +457,39 @@ func Image() {
 					layer2[i].D = 0
 				}
 				g := gray.GrayAt(x, y)
-				input[0].X = cmplx.Rect(float64(g.Y)/255, math.Pi*float64(y*dx+x)/float64(dx*dy))
-				g = gray.GrayAt(x+1, y)
-				output.X = cmplx.Rect(float64(g.Y)/255, math.Pi*float64(y*dx+x+1)/float64(dx*dy))
+				input[0].X = complex(float64(x)/float64(dx), float64(y)/float64(dy))
+				output.X = complex(float64(g.Y)/255, 0)
 				cost := sc128.Gradient(loss)
 				for i := range layer1 {
-					layer1[i].X -= (.001 + .001i) * layer1[i].D
+					layer1[i].X -= (.0001 + .0001i) * layer1[i].D
 				}
 				for i := range layer2 {
-					layer2[i].X -= (.001 + .001i) * layer2[i].D
+					layer2[i].X -= (.0001 + .0001i) * layer2[i].D
 				}
 				total += cmplx.Abs(cost.X)
 			}
 		}
 		fmt.Println(total / float64(dx*dy))
+	}
+
+	infer := image.NewGray(bounds)
+	for y := 0; y < dy; y++ {
+		for x := 0; x < dx; x++ {
+			input[0].X = complex(float64(x)/float64(dx), float64(y)/float64(dy))
+			grand(func(a *sc128.V) bool {
+				infer.Set(x, y, color.Gray{Y: byte(255 * real(a.X))})
+				return true
+			})
+		}
+	}
+	out, err := os.Create("infer_gray.jpg")
+	if err != nil {
+		panic(err)
+	}
+	defer out.Close()
+	err = png.Encode(out, infer)
+	if err != nil {
+		panic(err)
 	}
 }
 

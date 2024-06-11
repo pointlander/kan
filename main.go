@@ -11,6 +11,7 @@ import (
 	"image/color"
 	_ "image/jpeg"
 	"image/png"
+	"math"
 	"math/cmplx"
 	"math/rand"
 	"os"
@@ -404,12 +405,12 @@ func XOR1() {
 // Image is the image learning mode
 func Image() {
 	rng := rand.New(rand.NewSource(1))
-	input, err := os.Open("gray.jpg")
+	in, err := os.Open("gray.jpg")
 	if err != nil {
 		panic(err)
 	}
-	defer input.Close()
-	img, _, err := image.Decode(input)
+	defer in.Close()
+	img, _, err := image.Decode(in)
 	if err != nil {
 		panic(err)
 	}
@@ -417,9 +418,60 @@ func Image() {
 	bounds := gray.Bounds()
 	dx := bounds.Dx()
 	dy := bounds.Dy()
-	for i := 0; i < 1024*1024; i++ {
-		g := gray.GrayAt(rng.Intn(dx), rng.Intn(dy))
-		_ = g
+	input := make([]sc128.V, 1)
+	layer1 := make([]sc128.V, 10)
+	for i := range layer1 {
+		layer1[i].X = complex(rng.NormFloat64()/4, rng.NormFloat64()/4)
+	}
+	layer2 := make([]sc128.V, 5)
+	for i := range layer2 {
+		layer2[i].X = complex(rng.NormFloat64()/4, rng.NormFloat64()/4)
+	}
+	output := sc128.V{}
+	x := make([]sc128.Meta, 10)
+	y := make([]sc128.Meta, len(x)/2)
+	z := make([]sc128.Meta, len(y))
+	for i := range layer1 {
+		x[i] = sc128.Mul(input[0].Meta(), layer1[i].Meta())
+	}
+	for i := range y {
+		y[i] = sc128.Add(x[i], x[i+5])
+	}
+	for i := range z {
+		z[i] = sc128.Mul(sc128.Mul(y[i], y[i]), layer2[i].Meta())
+	}
+	grand := sc128.Add(z[0], z[1])
+	zz := z[2:]
+	for i := range zz {
+		grand = sc128.Add(grand, zz[i])
+	}
+	loss := sc128.Sub(output.Meta(), grand)
+	loss = sc128.Mul(loss, loss)
+	for i := 0; i < 128; i++ {
+		total := 0.0
+		for y := 0; y < dy; y++ {
+			for x := 0; x < dx-1; x++ {
+				for i := range layer1 {
+					layer1[i].D = 0
+				}
+				for i := range layer2 {
+					layer2[i].D = 0
+				}
+				g := gray.GrayAt(x, y)
+				input[0].X = cmplx.Rect(float64(g.Y)/255, math.Pi*float64(y*dx+x)/float64(dx*dy))
+				g = gray.GrayAt(x+1, y)
+				output.X = cmplx.Rect(float64(g.Y)/255, math.Pi*float64(y*dx+x+1)/float64(dx*dy))
+				cost := sc128.Gradient(loss)
+				for i := range layer1 {
+					layer1[i].X -= (.001 + .001i) * layer1[i].D
+				}
+				for i := range layer2 {
+					layer2[i].X -= (.001 + .001i) * layer2[i].D
+				}
+				total += cmplx.Abs(cost.X)
+			}
+		}
+		fmt.Println(total / float64(dx*dy))
 	}
 }
 
